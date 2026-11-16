@@ -4,7 +4,13 @@ An Architecture Decision Record (ADR) captures one significant technical choice:
 
 ADRs are append-only. A later change supersedes an earlier record. It does not rewrite history.
 
-No ADR has been accepted yet. Do not add one in anticipation of an interview. Add one when a decision is actually made and is ready to constrain later work.
+No ADR has been accepted yet. A Proposed record is under review and does not constrain implementation. Do not add one in anticipation of an interview. Add one when a decision is actually made and is ready to constrain later work, or when a real proposal must stay visible until review ends.
+
+## Records
+
+| ADR | Title | Status |
+|---|---|---|
+| [0001](0001-web-client-framework.md) | Propose Next.js as the V1 web client framework | Proposed |
 
 ## When to write an ADR
 

@@ -43,7 +43,7 @@ The alternatives that were compared, including the ones that were rejected.
 
 | Date | Session | Outcome |
 |---|---|---|
-| — | No interviews recorded yet | Repository bootstrap only |
+| 2026-11-15 | [System design: requirements, shipment creation, and frontend](2026-11-15-system-design-frontend.md) | Requirements and shipment-creation behavior recorded. [ADR-0001](../adr/0001-web-client-framework.md) is Proposed. No decision accepted |
 
 ## Rules
 

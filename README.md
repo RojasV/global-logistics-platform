@@ -2,7 +2,7 @@
 
 Enterprise-grade logistics and shipment tracking platform built through incremental system design, architectural decisions, and practical engineering challenges.
 
-This is a public engineering portfolio. The system is designed and implemented in the open, one reviewed decision at a time. No application stack has been selected.
+This is a public engineering portfolio. The system is designed and implemented in the open, one reviewed decision at a time. No application stack has been accepted. A web client framework is proposed and still under review.
 
 ## Overview
 
@@ -81,7 +81,8 @@ Rules for every change:
 
 | Path | Purpose |
 |---|---|
-| [docs/requirements](docs/requirements/README.md) | Problem scope, actors, scale targets, and open questions |
+| [docs/requirements](docs/requirements/README.md) | Problem scope, profiles, scale, and exercise service levels |
+| [docs/requirements/shipment-creation.md](docs/requirements/shipment-creation.md) | Shipment creation as business behavior, without an implementation |
 | [docs/architecture](docs/architecture/README.md) | Living map of the system, updated only after decisions exist |
 | [docs/adr](docs/adr/README.md) | Architecture Decision Records and the required ADR format |
 | [docs/interviews](docs/interviews/README.md) | Interview log and the tasks that follow from each session |
@@ -90,7 +91,7 @@ Architecture Decision Records are the source of truth for technical choices. Nar
 
 ## Current status
 
-**Stage:** repository bootstrap.
+**Stage:** first system-design session recorded. No architecture is accepted.
 
 | Item | State |
 |---|---|
@@ -99,9 +100,10 @@ Architecture Decision Records are the source of truth for technical choices. Nar
 | Application code | Not started |
 | Data stores | Not selected |
 | Runtime and infrastructure | Not selected |
-| Architecture decisions | None recorded |
+| Web client | [ADR-0001](docs/adr/0001-web-client-framework.md) proposes Next.js. Not accepted |
+| Architecture decisions | None accepted |
 
-The next step is the first system-design interview. Implementation waits for a microtask that names the decision it depends on.
+The session note is [2026-11-15](docs/interviews/2026-11-15-system-design-frontend.md). Implementation still waits for a microtask that names the decision it depends on. Client code waits until ADR-0001 is accepted or rejected.
 
 ## Initial roadmap
 

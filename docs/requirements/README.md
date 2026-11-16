@@ -8,17 +8,16 @@ The numbers are hypothetical design targets for a system-design exercise. They a
 
 Enterprise shippers and the operators who serve them need one place to manage shipments, receive carrier progress, reconstruct what happened, and notify the people who are allowed to know. Today that picture is split across carrier portals and internal tools. The split hides missing events, duplicate events, and access that crosses an organization boundary.
 
-## Capabilities in scope
+## Functional requirements
 
-These are problem areas, not an implementation backlog.
+The first system-design session made the original problem areas specific. These are exercise requirements, not an implementation backlog.
 
-- **Shipments.** Create and manage the unit of work that moves from origin to destination.
-- **Carriers.** Accept progress from more than one carrier without making the core record identical to any one carrier's payload.
-- **Delivery tracking.** Expose the current state of a shipment to the people allowed to see it.
-- **Tracking events.** Retain the sequence of observations that explain the current state.
-- **Organizations, users, and permissions.** Separate tenants and constrain what each user can do.
-- **History and reports.** Answer questions over past shipments, not only over today's work.
-- **Notifications and operations.** Tell people and downstream processes when something relevant changes.
+- **Shipments.** Create and manage the shipment that moves from origin to destination. The creation workflow is [business behavior only](shipment-creation.md).
+- **Carriers.** Integrate with FedEx, UPS, and DHL. Accept progress from those carriers without making the core record identical to any one carrier's payload.
+- **Tracking and event history.** Expose the current state of a shipment and retain the sequence of observations that explain it.
+- **Operational exceptions.** Manage exceptions that need investigation, including delays and failed or ambiguous carrier communication.
+- **Reports and notifications.** Answer questions over past shipments, and tell people and downstream processes when something relevant changes.
+- **Tenant isolation and role permissions.** Separate tenants. Constrain what each user profile can do. The permission matrix is not defined yet.
 
 Anything outside this list is out of scope until a later interview adds it.
 
@@ -32,7 +31,14 @@ Anything outside this list is out of scope until a later interview adds it.
 | Carrier | Reports movement. The carrier is an external system, not a tenant |
 | Platform operator | Runs the service against the availability target |
 
-Roles, permission names, and authentication methods are not defined yet.
+The session named four user profiles. They specialize the human actors above. The carrier stays an external system, not a profile. Permission names and authentication methods are not defined yet.
+
+| Profile | Place in the model |
+|---|---|
+| Enterprise Customer | A person acting for an enterprise tenant |
+| Operations Agent | Specializes the operator actor |
+| Customer Support | A distinct profile. Its boundary with Operations Agent is not defined |
+| Platform Administrator | Specializes the platform operator actor |
 
 ## Scale targets
 
@@ -54,25 +60,44 @@ Reading the targets:
 - 99.95% availability is about 4.4 hours of unavailability per year. The error budget has not been allocated to deploys, dependencies, or region failure.
 - The first region is US East. Europe is a stated direction, not a commitment to a topology.
 
+## Service level targets
+
+The first session set the following targets for the exercise. They are hypothetical. They are not measurements from a running system, and they do not choose a database, cache, or delivery mechanism.
+
+p95 latency is how fast the operation returns. The consistency column is how far that answer may trail the latest accepted observation, or which guarantee the write must provide. A fast response can still be stale within the bound in its row.
+
+| Operation | p95 latency | Consistency |
+|---|---|---|
+| Create shipment | 500 ms | Strong, internal creation |
+| Update ownership/permissions | 300 ms | Strong |
+| Shipment status | 300 ms | Eventual, up to 10 s |
+| Shipment search | 1 s | Eventual, up to 30 s |
+| Dashboard analytics | 2 s | Eventual, up to 60 s |
+| Standard reports | Within 5 minutes | Asynchronous |
+
+"Strong, internal creation" applies to the shipment record inside the platform. It does not require the carrier to confirm inside 500 ms. That split is part of the [shipment creation behavior](shipment-creation.md).
+
 ## Quality attributes called out so far
 
 - **Availability.** 99.95% for the service as a whole. Which user journeys sit inside that target is still open.
 - **Isolation.** A tenant must not read or change another tenant's shipments, users, or history.
 - **Traceability.** A current delivery state should be explainable from retained events.
+- **Responsiveness.** The six operations above have exercise targets for latency and consistency.
 - **Change safety.** Decisions that affect these attributes are recorded as ADRs before code depends on them.
 
-Latency targets, consistency guarantees, retention periods, and recovery-point objectives have not been set.
+Retention periods and recovery-point objectives have not been set.
 
 ## Open questions
 
 These are input for later interviews. None of them is decided here.
 
 - What is a shipment, and which fields are required at creation?
+- Which profiles are allowed to create a shipment or change ownership?
 - How is carrier identity represented, and what happens when two carriers disagree?
 - Are tracking events immutable observations, or can a later event correct an earlier one?
 - What ordering guarantee does a shipment timeline need?
 - How long are events and shipments retained?
-- Which actions require a stronger consistency guarantee than the timeline view?
+- How do the staleness bounds behave while the carrier or the platform is failing?
 - How is a user bound to an organization, and can one user belong to more than one?
 - Which journeys must meet 99.95%, and which may degrade first?
 - What does Europe expansion require for residency, latency, and failover?

@@ -4,7 +4,7 @@ This folder is the narrative map of the system. It explains how the platform fit
 
 ## Source of truth
 
-Accepted choices live in [Architecture Decision Records](../adr/README.md). When this narrative and an ADR disagree, the ADR wins until it is superseded by a newer ADR.
+Accepted choices live in [Architecture Decision Records](../adr/README.md). When this narrative and an accepted ADR disagree, the accepted ADR wins until it is superseded by a newer ADR. A Proposed ADR does not override this narrative.
 
 Interview notes in [docs/interviews](../interviews/README.md) capture the discussion that led to a decision. They are background, not specification.
 
@@ -12,16 +12,18 @@ Interview notes in [docs/interviews](../interviews/README.md) capture the discus
 
 No architectural decision has been accepted.
 
+Business behavior for shipment creation is recorded in [requirements](../requirements/shipment-creation.md). This folder does not repeat it and does not describe an implementation.
+
 In particular, none of the following has been chosen:
 
-- Language, framework, or runtime
+- Language, framework, or runtime. Next.js is proposed in [ADR-0001](../adr/0001-web-client-framework.md) and is not in force.
 - Modular monolith, services, or any other process topology
 - Database, cache, search, or event log
 - Synchronization or messaging style
 - Hosting region topology beyond the requirement that the first region is US East
 - Authentication product or authorization model
 
-Those items will appear here only after an ADR records them.
+Those items will appear here only after an ADR accepts them.
 
 ## What this folder will hold later
 
@@ -51,3 +53,4 @@ Each of those documents should link to the ADRs it summarizes.
 | Data architecture | Not started |
 | Delivery and operations | Not started |
 | Accepted ADRs | None |
+| Proposed ADRs | [ADR-0001](../adr/0001-web-client-framework.md), web client framework |
