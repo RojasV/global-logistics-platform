@@ -11,6 +11,7 @@ No ADR has been accepted yet. A Proposed record is under review and does not con
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-web-client-framework.md) | Propose Next.js as the V1 web client framework | Proposed |
+| [0002](0002-realtime-shipment-notifications.md) | Propose Kafka, Redis Pub/Sub, and SSE for shipment status | Proposed |
 
 ## When to write an ADR
 

@@ -14,16 +14,18 @@ No architectural decision has been accepted.
 
 Business behavior for shipment creation is recorded in [requirements](../requirements/shipment-creation.md). This folder does not repeat it and does not describe an implementation.
 
+A candidate for shipment-status fan-out is written in [realtime shipment notifications](realtime-shipment-notifications.md). It is **Proposed / Under Evaluation** in [ADR-0002](../adr/0002-realtime-shipment-notifications.md). It is not the platform architecture. The example under `examples/realtime-notifications` studies that candidate and does not promote it.
+
 In particular, none of the following has been chosen:
 
 - Language, framework, or runtime. Next.js is proposed in [ADR-0001](../adr/0001-web-client-framework.md) and is not in force.
 - Modular monolith, services, or any other process topology
 - Database, cache, search, or event log
-- Synchronization or messaging style
+- Synchronization or messaging style. Kafka, Redis Pub/Sub, and SSE are proposed in ADR-0002 and are not in force.
 - Hosting region topology beyond the requirement that the first region is US East
 - Authentication product or authorization model
 
-Those items will appear here only after an ADR accepts them.
+Accepted choices are summarized here only after an ADR accepts them. A proposal may be written earlier and stays labeled Proposed.
 
 ## What this folder will hold later
 
@@ -41,7 +43,7 @@ Each of those documents should link to the ADRs it summarizes.
 
 - Application code and configuration.
 - Vendor tutorials or boilerplate.
-- Diagrams that name products not yet accepted in an ADR.
+- Diagrams that present an unaccepted product as the chosen design. A proposal may name products when the document and its ADR both say Proposed.
 - Silent revisions of an accepted decision. Supersede the ADR instead.
 
 ## Status
@@ -52,5 +54,6 @@ Each of those documents should link to the ADRs it summarizes.
 | Service or module boundaries | Not started |
 | Data architecture | Not started |
 | Delivery and operations | Not started |
+| Real-time shipment notifications | Proposed / Under Evaluation. Not accepted |
 | Accepted ADRs | None |
-| Proposed ADRs | [ADR-0001](../adr/0001-web-client-framework.md), web client framework |
+| Proposed ADRs | [ADR-0001](../adr/0001-web-client-framework.md), web client. [ADR-0002](../adr/0002-realtime-shipment-notifications.md), notification fan-out |

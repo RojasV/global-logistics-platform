@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipment status study</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 40rem; line-height: 1.45; color: #1c1917; }
+    label { display: block; margin-top: 0.75rem; }
+    input, button { font: inherit; }
+    button { margin-right: 0.5rem; margin-top: 0.75rem; }
+    #log { white-space: pre-wrap; background: #f5f5f4; padding: 1rem; }
+    #view { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Shipment status study</h1>
+  <p>Educational client for the proposed SSE path. Query parameters stand in for a session. They are not authentication.</p>
+  <label>Tenant <input id="tenant" value="tenant-acme"></label>
+  <label>User <input id="user" value="alice"></label>
+  <label>Shipment <input id="shipment" value="shp-1"></label>
+  <label>Next status <input id="status" value="in_transit"></label>
+  <div>
+    <button id="connect" type="button">Connect SSE</button>
+    <button id="publish" type="button">Publish status</button>
+    <button id="race" type="button">Run stale HTTP demo</button>
+  </div>
+  <p>Visible status: <span id="view">none yet</span></p>
+  <h2>Log</h2>
+  <div id="log"></div>
+  <script>
+    let source = null;
+    let view = null;
+    let revisionCounter = 0;
+
+    const logNode = document.querySelector("#log");
+    const viewNode = document.querySelector("#view");
+
+    function log(line) {
+      logNode.textContent += line + "\n";
+    }
+
+    function applyStatusUpdate(current, incoming) {
+      if (
+        current &&
+        current.shipmentId === incoming.shipmentId &&
+        current.tenantId === incoming.tenantId &&
+        incoming.revision <= current.revision
+      ) {
+        return current;
+      }
+      return incoming;
+    }
+
+    function show(next, reason) {
+      const previous = view;
+      view = applyStatusUpdate(view, next);
+      const ignored = previous && view === previous;
+      viewNode.textContent = view
+        ? "revision " + view.revision + " · " + view.status
+        : "none yet";
+      log((ignored ? "ignored " : "applied ") + reason + " revision " + next.revision + " (" + next.status + ")");
+    }
+
+    document.querySelector("#connect").addEventListener("click", () => {
+      if (source) source.close();
+      const tenant = document.querySelector("#tenant").value;
+      const user = document.querySelector("#user").value;
+      const shipment = document.querySelector("#shipment").value;
+      const params = new URLSearchParams({ tenantId: tenant, userId: user, shipments: shipment });
+      source = new EventSource("/events?" + params.toString());
+      source.addEventListener("shipment-status", (event) => {
+        show(JSON.parse(event.data), "SSE");
+      });
+      source.onerror = () => log("SSE connection interrupted. Redis will not replay missed events. Reconcile with a shipment read.");
+      log("SSE connecting for " + user + " at " + tenant + " / " + shipment);
+    });
+
+    document.querySelector("#publish").addEventListener("click", async () => {
+      revisionCounter += 1;
+      const body = {
+        eventId: crypto.randomUUID(),
+        shipmentId: document.querySelector("#shipment").value,
+        tenantId: document.querySelector("#tenant").value,
+        revision: revisionCounter,
+        status: document.querySelector("#status").value,
+        occurredAt: new Date().toISOString(),
+      };
+      const response = await fetch("/shipments/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      log("Published revision " + body.revision + " (" + response.status + ").");
+    });
+
+    document.querySelector("#race").addEventListener("click", async () => {
+      const tenant = document.querySelector("#tenant").value;
+      const shipment = document.querySelector("#shipment").value;
+      if (!view) {
+        log("Publish once before the race so a snapshot exists.");
+        return;
+      }
+      const response = await fetch(
+        "/shipments/" + encodeURIComponent(shipment) + "/snapshot?tenantId=" + encodeURIComponent(tenant) + "&delayMs=400",
+      );
+      const target = Math.max(revisionCounter, view.revision) + 1;
+      revisionCounter = target;
+      await fetch("/shipments/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          eventId: crypto.randomUUID(),
+          shipmentId: shipment,
+          tenantId: tenant,
+          revision: target,
+          status: "newer-than-the-http-body",
+          occurredAt: new Date().toISOString(),
+        }),
+      });
+      await new Promise((resolve) => {
+        const timer = setInterval(() => {
+          if (view && view.revision >= target) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 20);
+      });
+      const stale = await response.json();
+      show(stale, "late HTTP");
+    });
+  </script>
+</body>
+</html>

@@ -84,6 +84,8 @@ Rules for every change:
 | [docs/requirements](docs/requirements/README.md) | Problem scope, profiles, scale, and exercise service levels |
 | [docs/requirements/shipment-creation.md](docs/requirements/shipment-creation.md) | Shipment creation as business behavior, without an implementation |
 | [docs/architecture](docs/architecture/README.md) | Living map of the system, updated only after decisions exist |
+| [docs/architecture/realtime-shipment-notifications.md](docs/architecture/realtime-shipment-notifications.md) | Candidate shipment-status fan-out. Proposed, not accepted |
+| [examples/realtime-notifications](examples/realtime-notifications/README.md) | Executable study of that candidate. Not the platform |
 | [docs/adr](docs/adr/README.md) | Architecture Decision Records and the required ADR format |
 | [docs/interviews](docs/interviews/README.md) | Interview log and the tasks that follow from each session |
 
@@ -97,13 +99,14 @@ Architecture Decision Records are the source of truth for technical choices. Nar
 |---|---|
 | Visibility | Public |
 | Default branch | `main` |
-| Application code | Not started |
+| Application code | Platform not started. Isolated study in [examples/realtime-notifications](examples/realtime-notifications/README.md) |
 | Data stores | Not selected |
 | Runtime and infrastructure | Not selected |
 | Web client | [ADR-0001](docs/adr/0001-web-client-framework.md) proposes Next.js. Not accepted |
+| Shipment notifications | [ADR-0002](docs/adr/0002-realtime-shipment-notifications.md) proposes Kafka, Redis Pub/Sub, and SSE. Not accepted |
 | Architecture decisions | None accepted |
 
-The session note is [2026-11-15](docs/interviews/2026-11-15-system-design-frontend.md). Implementation still waits for a microtask that names the decision it depends on. Client code waits until ADR-0001 is accepted or rejected.
+The session note is [2026-11-15](docs/interviews/2026-11-15-system-design-frontend.md). The notification example studies ADR-0002. It does not accept that ADR and it does not start the platform. Product client code waits until ADR-0001 is accepted or rejected.
 
 ## Initial roadmap
 
