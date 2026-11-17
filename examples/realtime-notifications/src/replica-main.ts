@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { createClient, type RedisClientType } from "redis";
 import type { ShipmentNotification } from "./contracts.ts";
 import { SHIPMENT_STATUS_CHANNEL } from "./pubsub.ts";
@@ -52,7 +53,52 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/events") {
+    openSse(req, res, url);
+    return;
+  }
+
   sendJson(res, 404, { error: "not found" });
+}
+
+function openSse(req: IncomingMessage, res: ServerResponse, url: URL): void {
+  const tenantId = url.searchParams.get("tenantId") ?? "";
+  const userId = url.searchParams.get("userId") ?? "";
+  const shipments = (url.searchParams.get("shipments") ?? "").split(",").filter((id) => id.length > 0);
+  if (!tenantId || !userId || shipments.length === 0) {
+    sendJson(res, 400, { error: "tenantId, userId, and shipments are required" });
+    return;
+  }
+
+  const connectionId = randomUUID();
+  writeCors(res);
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+  res.write(`: connected ${connectionId} replica ${replicaId}\n\n`);
+
+  fanout.connect(
+    {
+      connectionId,
+      tenantId,
+      userId,
+      authorizedShipmentIds: shipments,
+      connectedAt: new Date().toISOString(),
+    },
+    (notification) => {
+      if (res.destroyed || res.writableEnded) {
+        fanout.disconnect(connectionId);
+        return;
+      }
+      res.write(`id: ${notification.revision}\nevent: shipment-status\ndata: ${JSON.stringify(notification)}\n\n`);
+    },
+  );
+
+  const close = () => fanout.disconnect(connectionId);
+  req.on("close", close);
+  res.on("close", close);
 }
 
 function remember(notification: ShipmentNotification): void {
