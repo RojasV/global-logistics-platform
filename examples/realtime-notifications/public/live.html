@@ -32,6 +32,7 @@
   </p>
   <p>Visible status: <span id="view">none yet</span></p>
   <h2>Log</h2>
+  <p><button id="clear-log" type="button">Clear log</button></p>
   <div id="log"></div>
   <script>
     const ports = { A: 4317, B: 4318, C: 4319 };
@@ -44,6 +45,10 @@
     function log(line) {
       logNode.textContent += line + "\n";
     }
+
+    document.querySelector("#clear-log").addEventListener("click", () => {
+      logNode.textContent = "";
+    });
 
     function selectedReplica() {
       return document.querySelector("input[name=replica]:checked").value;
