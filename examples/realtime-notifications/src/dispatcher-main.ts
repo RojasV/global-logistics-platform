@@ -11,14 +11,6 @@ const publisher = createClient({ url: redisUrl });
 await publisher.connect();
 
 const kafka = new Kafka({ clientId: "notification-dispatcher", brokers: [kafkaBroker] });
-const admin = kafka.admin();
-await admin.connect();
-await admin.createTopics({
-  topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
-  waitForLeaders: true,
-});
-await admin.disconnect();
-
 const consumer = kafka.consumer({ groupId: "notification-dispatcher" });
 await consumer.connect();
 await consumer.subscribe({ topic, fromBeginning: false });
