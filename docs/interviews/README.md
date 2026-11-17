@@ -44,6 +44,7 @@ The alternatives that were compared, including the ones that were rejected.
 | Date | Session | Outcome |
 |---|---|---|
 | 2026-11-15 | [System design: requirements, shipment creation, and frontend](2026-11-15-system-design-frontend.md) | Requirements and shipment-creation behavior recorded. [ADR-0001](../adr/0001-web-client-framework.md) is Proposed. No decision accepted |
+| 2026-11-16 | [Local Kafka, Redis, and topic lifecycle](2026-11-16-local-kafka-redis-topic-lifecycle.md) | Local broker exercise recorded. No decision. [ADR-0002](../adr/0002-realtime-shipment-notifications.md) stays Proposed |
 
 ## Rules
 

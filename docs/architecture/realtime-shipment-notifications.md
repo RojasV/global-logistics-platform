@@ -70,6 +70,14 @@ These are the field meanings for the candidate. The TypeScript shapes used by th
 
 `npm test` and `npm run serve` call the dispatcher with an event object. They do not poll a broker. In the candidate, and in `npm run live`, that call is the body of the Kafka consumer after a record is polled.
 
+#### Topic lifecycle
+
+The broker process starts without application topics. `shipment-status` is declared on the cluster before any producer or consumer connects. The declaration chooses partitions, replication, and retention. The platform usually owns that declaration. The service that emits the event may also ensure its own output topic when it starts. The consumer does not own the topic. It subscribes to a name that already exists, and it waits or fails when the name is missing.
+
+A consumer group is not declared beside the topic. The group appears when a process connects with a `groupId` and subscribes. One topic can have several groups. Each group stores its own offsets and receives its own copy of each record. Members of a single group share the partitions.
+
+This local study creates `shipment-status` inside the dispatcher process, immediately before `subscribe`. The worker and the replicas boot from one command, and nothing has declared the topic yet. That call keeps the study runnable. It is not the standard place to choose partition count or retention. The stand-in backend only connects a producer and sends to the topic name.
+
 #### Consumer groups
 
 A consumer group is a set of consumers that share one subscription. The group coordinator assigns each partition to one member. The group stores one offset per partition. Members are competing consumers: they split the work so the group can keep up and so a dead member's partitions move to a live one.
