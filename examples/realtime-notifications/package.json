@@ -8,6 +8,7 @@
     "test": "node --experimental-strip-types --test test/notifications.test.ts"
   },
   "dependencies": {
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "redis": "^6.3.1"
   }
 }
