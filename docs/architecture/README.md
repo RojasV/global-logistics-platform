@@ -14,7 +14,7 @@ No architectural decision has been accepted.
 
 Business behavior for shipment creation is recorded in [requirements](../requirements/shipment-creation.md). This folder does not repeat it and does not describe an implementation.
 
-A candidate for shipment-status fan-out is written in [realtime shipment notifications](realtime-shipment-notifications.md). It is **Proposed / Under Evaluation** in [ADR-0002](../adr/0002-realtime-shipment-notifications.md). It is not the platform architecture. The example under `examples/realtime-notifications` studies that candidate and does not promote it.
+A candidate for shipment-status fan-out is written in [realtime shipment notifications](realtime-shipment-notifications.md). It is **Proposed / Under Evaluation** in [ADR-0002](../adr/0002-realtime-shipment-notifications.md). It is not the platform architecture. The example under `examples/realtime-notifications` studies that candidate. Its local run starts Kafka and Redis. The study does not promote the candidate.
 
 In particular, none of the following has been chosen:
 

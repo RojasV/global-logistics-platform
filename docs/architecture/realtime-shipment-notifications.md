@@ -4,7 +4,7 @@
 
 Kafka, the Notification Dispatcher, Redis Pub/Sub, and SSE are a candidate for pushing shipment status to browsers. This document does not accept that candidate. No production service may depend on it while [ADR-0002](../adr/0002-realtime-shipment-notifications.md) stays Proposed.
 
-The isolated study lives in [examples/realtime-notifications](../../examples/realtime-notifications). That example is not the logistics platform. It does not run Kafka. It uses an in-process stand-in for Redis Pub/Sub so the fan-out can be executed without a broker.
+The isolated study lives in [examples/realtime-notifications](../../examples/realtime-notifications). That example is not the logistics platform. `npm test` and `npm run serve` use an in-process stand-in for Redis Pub/Sub and do not start a broker. `npm run live` starts a local Kafka and Redis so the same candidate can be watched process by process. Neither path accepts the candidate.
 
 This write-up follows the frontend session on [2026-11-15](../interviews/2026-11-15-system-design-frontend.md). That session left the live-update mechanism open. Shipment status is an exercise target of 300 ms p95 and eventual consistency with a lag of up to 10 seconds. See the [service level targets](../requirements/README.md). This path is one way to chase that lag. It does not guarantee it.
 
@@ -68,7 +68,7 @@ These are the field meanings for the candidate. The TypeScript shapes used by th
 | Output | Records read by the Notification Dispatcher consumer group. |
 | Failure | A broker outage blocks new produces and consumes. Events that were acknowledged remain on the log and are read again after recovery. A consumer that crashes before committing an offset reads that record again. The result is at-least-once delivery into the dispatcher, so `eventId` and `revision` must make a repeat harmless. |
 
-Kafka is not part of the example process. The example calls the dispatcher with an event object. In the candidate, that call is the body of the Kafka consumer after a record is polled.
+`npm test` and `npm run serve` call the dispatcher with an event object. They do not poll a broker. In the candidate, and in `npm run live`, that call is the body of the Kafka consumer after a record is polled.
 
 #### Consumer groups
 
@@ -219,3 +219,5 @@ Polling remains a credible way to meet a 10-second lag, especially until the mis
 | Load balancer across replicas | One process, three replica objects, browser socket attached to replica A |
 
 The tests exercise routing, authorization, fan-out, revisions, a late HTTP body, and disconnect against those objects. They are not a production certification.
+
+`docker compose up` in the example directory starts a local Redis and a local Kafka. `npm run live` then starts one dispatcher and three replica processes. That exercises the same candidate with real brokers. It does not accept the candidate. A button that publishes only on one replica writes to that process's registry and does not enter Kafka or Redis. The Kafka button does. A browser pinned to replica B therefore sees a local publish on B, does not see a local publish on A or C, and does see a Kafka publish because Redis copies that publish to all three processes.
