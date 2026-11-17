@@ -16,7 +16,7 @@
   <h1>Three local replicas</h1>
   <p>
     This page is a study, not an accepted production design. Replica A is port 4317, B is 4318, C is 4319.
-    Connect SSE pins this browser to the selected replica.
+    A local publish is written only into that process's connection list. A Kafka publish is fanned out by Redis to every replica, and only the replica that holds this browser writes the event.
   </p>
   <p>
     <label><input type="radio" name="replica" value="A"> Connected to A</label>
@@ -25,6 +25,10 @@
   </p>
   <p>
     <button id="connect" type="button">Connect SSE</button>
+    <button id="local-a" type="button">Publish only on A</button>
+    <button id="local-b" type="button">Publish only on B</button>
+    <button id="local-c" type="button">Publish only on C</button>
+    <button id="kafka" type="button">Publish through Kafka</button>
   </p>
   <p>Visible status: <span id="view">none yet</span></p>
   <h2>Log</h2>
@@ -33,6 +37,7 @@
     const ports = { A: 4317, B: 4318, C: 4319 };
     let source = null;
     let view = null;
+    let revisionCounter = 0;
     const logNode = document.querySelector("#log");
     const viewNode = document.querySelector("#view");
 
@@ -46,6 +51,18 @@
 
     function origin(replica) {
       return "http://127.0.0.1:" + ports[replica];
+    }
+
+    function nextEvent(status) {
+      revisionCounter += 1;
+      return {
+        eventId: crypto.randomUUID(),
+        shipmentId: "shp-1",
+        tenantId: "tenant-acme",
+        revision: revisionCounter,
+        status: status,
+        occurredAt: new Date().toISOString(),
+      };
     }
 
     function applyStatusUpdate(current, incoming) {
@@ -77,6 +94,30 @@
       log("Browser socket is on replica " + replica + " only.");
     });
 
+    async function postLocal(replica) {
+      const body = nextEvent("local-on-" + replica);
+      const response = await fetch(origin(replica) + "/local-status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      log("Local publish on " + replica + " revision " + body.revision + " (" + response.status + "). It reaches this page only when the socket is on " + replica + ".");
+    }
+
+    document.querySelector("#local-a").addEventListener("click", () => postLocal("A"));
+    document.querySelector("#local-b").addEventListener("click", () => postLocal("B"));
+    document.querySelector("#local-c").addEventListener("click", () => postLocal("C"));
+
+    document.querySelector("#kafka").addEventListener("click", async () => {
+      const replica = selectedReplica();
+      const body = nextEvent("via-kafka");
+      const response = await fetch(origin("A") + "/shipments/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      log("Kafka accepted revision " + body.revision + " (" + response.status + "). Your browser is on replica " + replica + ", so " + replica + " shows this update.");
+    });
   </script>
 </body>
 </html>
