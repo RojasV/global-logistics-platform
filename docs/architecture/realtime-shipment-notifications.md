@@ -76,7 +76,7 @@ The broker process starts without application topics. `shipment-status` is decla
 
 A consumer group is not declared beside the topic. The group appears when a process connects with a `groupId` and subscribes. One topic can have several groups. Each group stores its own offsets and receives its own copy of each record. Members of a single group share the partitions.
 
-This local study creates `shipment-status` inside the dispatcher process, immediately before `subscribe`. The worker and the replicas boot from one command, and nothing has declared the topic yet. That call keeps the study runnable. It is not the standard place to choose partition count or retention. The stand-in backend only connects a producer and sends to the topic name.
+This local study runs a short-lived process that declares `shipment-status` and exits. The dispatcher starts after that and only subscribes. The stand-in backend only connects a producer and sends to the topic name. The declaration still lives in the study, not in a platform pipeline. The partition count and retention are fixed so the local broker can run. They are not an accepted production setting.
 
 #### Consumer groups
 

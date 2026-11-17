@@ -49,6 +49,7 @@ This is still a study. ADR-0002 stays Proposed.
 ```bash
 docker compose up -d
 npm install
+npm run topics
 npm run live
 ```
 
@@ -57,7 +58,7 @@ Open `http://127.0.0.1:4317`. Replica A is that port, B is `4318`, and C is `431
 - **Publish only on A, B, or C** writes into that process's own connection list. A browser connected to B receives the B button and does not receive the A or C buttons.
 - **Publish through Kafka** appends the event to the local broker. The dispatcher, in consumer group `notification-dispatcher`, publishes it on Redis. Every replica is subscribed, so the browser receives it on A, B, or C, whichever socket it opened.
 
-The dispatcher creates the topic `shipment-status` and then subscribes. That keeps this one-command study from failing when the broker has no application topics yet. The standard order is different: the topic is declared on the broker first, with its partitions and retention, and only then do producers and consumers connect. A consumer group is not part of that declaration. It appears when a consumer subscribes with a `groupId`. One topic can have several groups. One consumer can subscribe to several topics.
+`npm run topics` declares `shipment-status` and exits. `npm run live` repeats that declaration, waits until it finishes, and only then starts the dispatcher and the three replicas. The dispatcher only subscribes. It does not create the topic. Partition count and retention in that declaration are local settings so the exercise can run. They are not an accepted production choice. A consumer group is not part of the declaration. It appears when a consumer subscribes with a `groupId`. One topic can have several groups. One consumer can subscribe to several topics.
 
 Redis still does not store the message. A replica that subscribes late misses it.
 
