@@ -5,6 +5,7 @@
   "scripts": {
     "demo": "node --experimental-strip-types src/demo.ts",
     "serve": "node --experimental-strip-types src/server.ts",
+    "replica": "node --experimental-strip-types src/replica-main.ts",
     "test": "node --experimental-strip-types --test test/notifications.test.ts"
   },
   "dependencies": {

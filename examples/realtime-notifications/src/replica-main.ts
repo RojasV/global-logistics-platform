@@ -1,0 +1,75 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createClient, type RedisClientType } from "redis";
+import type { ShipmentNotification } from "./contracts.ts";
+import { SHIPMENT_STATUS_CHANNEL } from "./pubsub.ts";
+import { SseReplica } from "./sse-replica.ts";
+
+const replicaId = process.env.REPLICA_ID ?? "A";
+const port = Number(process.env.PORT ?? "4317");
+const redisUrl = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+
+const latestByShipment = new Map<string, ShipmentNotification>();
+const fanout = new SseReplica(
+  { subscribe() {}, unsubscribe() {}, publish() { return 0; } },
+  replicaId,
+);
+
+const subscriber = createClient({ url: redisUrl }) as RedisClientType;
+subscriber.on("error", (error) => {
+  console.error(`[replica ${replicaId}] redis`, error.message);
+});
+
+await subscriber.connect();
+await subscriber.subscribe(SHIPMENT_STATUS_CHANNEL, (message) => {
+  remember(JSON.parse(message) as ShipmentNotification);
+  fanout.acceptMessage(message);
+});
+
+const server = createServer(async (req, res) => {
+  try {
+    await route(req, res);
+  } catch (error) {
+    console.error(`[replica ${replicaId}]`, error);
+    if (!res.headersSent) sendJson(res, 500, { error: "unexpected error" });
+  }
+});
+
+server.listen(port, "127.0.0.1", () => {
+  console.log(`SSE replica ${replicaId} on http://127.0.0.1:${port} (Redis fan-out + local registry)`);
+});
+
+async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? "/", "http://127.0.0.1");
+  if (req.method === "OPTIONS") {
+    writeCors(res);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/health") {
+    sendJson(res, 200, { replicaId, connections: fanout.connectionCount() });
+    return;
+  }
+
+  sendJson(res, 404, { error: "not found" });
+}
+
+function remember(notification: ShipmentNotification): void {
+  const key = `${notification.tenantId}:${notification.shipmentId}`;
+  const previous = latestByShipment.get(key);
+  if (!previous || notification.revision >= previous.revision) latestByShipment.set(key, notification);
+}
+
+function writeCors(res: ServerResponse): void {
+  res.setHeader("access-control-allow-origin", "*");
+  res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+  res.setHeader("access-control-allow-headers", "content-type");
+}
+
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  writeCors(res);
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(body));
+}
+
