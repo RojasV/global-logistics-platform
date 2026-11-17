@@ -23,7 +23,7 @@ in-process Redis Pub/Sub stand-in
   browser on replica A
 ```
 
-The shipment backend is a POST, or a direct function call in the demo. In the candidate, that call is the body of a Kafka consumer. Kafka is not installed and not started. There is no topic, offset, or broker.
+The shipment backend is a POST, or a direct function call in the demo. In the candidate, that call is the body of a Kafka consumer. The in-memory commands do not start a broker. The local section below starts one.
 
 The pub/sub class copies Redis Pub/Sub's fan-out: every current subscriber receives the message, and the message is not stored. **Redis Pub/Sub does not guarantee durable notification delivery.** A subscriber that is down, not yet subscribed, or already disconnected misses the message. There is no backlog. The client has to reconcile. In this study, reconciliation is a snapshot read merged by `revision`. In the candidate, that read is the shipment record, which this process does not have.
 
@@ -31,7 +31,7 @@ Replica A, B, and C are three objects in one process. Each has its own connectio
 
 ## Setup
 
-Requires Node.js 22 or newer. There are no package dependencies and no Docker services.
+Requires Node.js 22 or newer. `npm test`, `npm run demo`, and `npm run serve` install nothing. The local broker section uses Docker and the Kafka and Redis clients.
 
 ```bash
 cd examples/realtime-notifications
@@ -40,7 +40,26 @@ npm run demo
 npm run serve
 ```
 
-`npm run serve` listens on `http://127.0.0.1:4317`. Override the port with `PORT`.
+`npm run serve` listens on `http://127.0.0.1:4317` and keeps Kafka and Redis inside one process. Override the port with `PORT`.
+
+## Local Kafka, Redis, and three replica processes
+
+This is still a study. ADR-0002 stays Proposed.
+
+```bash
+docker compose up -d
+npm install
+npm run live
+```
+
+Open `http://127.0.0.1:4317`. Replica A is that port, B is `4318`, and C is `4319`.
+
+- **Publish only on A, B, or C** writes into that process's own connection list. A browser connected to B receives the B button and does not receive the A or C buttons.
+- **Publish through Kafka** appends the event to the local broker. The dispatcher, in consumer group `notification-dispatcher`, publishes it on Redis. Every replica is subscribed, so the browser receives it on A, B, or C, whichever socket it opened.
+
+The dispatcher creates the topic `shipment-status` and then subscribes. That keeps this one-command study from failing when the broker has no application topics yet. The standard order is different: the topic is declared on the broker first, with its partitions and retention, and only then do producers and consumers connect. A consumer group is not part of that declaration. It appears when a consumer subscribes with a `groupId`. One topic can have several groups. One consumer can subscribe to several topics.
+
+Redis still does not store the message. A replica that subscribes late misses it.
 
 ## Simulate a shipment update
 
@@ -75,11 +94,11 @@ The tests drive the dispatcher, the pub/sub stand-in, the replicas, and the HTTP
 
 | Candidate under evaluation | This example |
 |---|---|
-| Durable event log in Kafka, one dispatcher consumer group | The caller invokes the dispatcher. No Kafka infrastructure |
+| Durable event log in Kafka, one dispatcher consumer group | In-memory path: the caller invokes the dispatcher. Live path: a local broker and one consumer group |
 | Redis server, Pub/Sub, no retention | In-process publish to current subscribers, then the message is dropped |
 | Channel per tenant | One channel, filter locally |
 | Shipment database as the source reconciled on reconnect | Process-local map of the latest notification, plus a delayed snapshot |
 | Authenticated session and a real allow-list | Query string |
-| SSE replicas as separate processes | Objects A, B, and C in this process |
+| SSE replicas as separate processes | In-memory path: objects A, B, and C in one process. Live path: three processes |
 
 Losing a message in Redis is still losing a message if the stand-in is replaced with a real Redis server. Durable delivery would require a different product than Redis Pub/Sub, or the shipment read this study already treats as mandatory.
