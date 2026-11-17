@@ -9,7 +9,7 @@ Shipment status has an exercise target of 300 ms p95 and eventual consistency wi
 
 A later pass sketched a concrete fan-out: the shipment backend appends a status event to Kafka, one dispatcher consumer group publishes it to Redis Pub/Sub, and every SSE replica delivers it to the browsers connected on that process. The component behavior, the contracts, and the failure cases are in [realtime shipment notifications](../architecture/realtime-shipment-notifications.md). This record does not repeat that catalog.
 
-The sketch is not an approved production architecture. The example under `examples/realtime-notifications` studies it. The example does not run Kafka.
+The sketch is not an approved production architecture. The example under `examples/realtime-notifications` studies it. The in-memory path does not run Kafka. A local Docker path starts a broker and Redis. Running that path does not accept this ADR.
 
 ## Alternatives considered
 
