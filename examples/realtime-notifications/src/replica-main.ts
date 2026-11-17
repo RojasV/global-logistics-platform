@@ -1,13 +1,16 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
+import { Kafka, type Producer } from "kafkajs";
 import { createClient, type RedisClientType } from "redis";
 import { parseStatusChangedEvent, type ShipmentNotification, type ShipmentStatusChangedEvent } from "./contracts.ts";
 import { SHIPMENT_STATUS_CHANNEL } from "./pubsub.ts";
 import { SseReplica } from "./sse-replica.ts";
 
+const TOPIC = "shipment-status";
 const replicaId = process.env.REPLICA_ID ?? "A";
 const port = Number(process.env.PORT ?? "4317");
 const redisUrl = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+const kafkaBroker = process.env.KAFKA_BROKER ?? "127.0.0.1:9092";
 
 const latestByShipment = new Map<string, ShipmentNotification>();
 const fanout = new SseReplica(
@@ -16,6 +19,9 @@ const fanout = new SseReplica(
 );
 
 const subscriber = createClient({ url: redisUrl }) as RedisClientType;
+const kafka = new Kafka({ clientId: `sse-replica-${replicaId}`, brokers: [kafkaBroker] });
+const producer: Producer = kafka.producer();
+
 subscriber.on("error", (error) => {
   console.error(`[replica ${replicaId}] redis`, error.message);
 });
@@ -25,6 +31,7 @@ await subscriber.subscribe(SHIPMENT_STATUS_CHANNEL, (message) => {
   remember(JSON.parse(message) as ShipmentNotification);
   fanout.acceptMessage(message);
 });
+await producer.connect();
 
 const server = createServer(async (req, res) => {
   try {
@@ -68,6 +75,20 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     remember(notification);
     fanout.acceptMessage(JSON.stringify(notification));
     sendJson(res, 202, { scope: "local", replicaId, notification });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/shipments/status") {
+    const event = parseStatusChangedEvent(JSON.parse(await readBody(req)));
+    if (!event) {
+      sendJson(res, 400, { error: "invalid status event" });
+      return;
+    }
+    await producer.send({
+      topic: TOPIC,
+      messages: [{ key: event.shipmentId, value: JSON.stringify(event) }],
+    });
+    sendJson(res, 202, { scope: "kafka", replicaId, topic: TOPIC, event });
     return;
   }
 
