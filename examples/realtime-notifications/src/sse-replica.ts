@@ -58,6 +58,11 @@ export class SseReplica {
     return this.registry.size;
   }
 
+  /** Hand one Redis (or local) payload to this replica's own sockets only. */
+  acceptMessage(message: string): void {
+    this.deliver(message);
+  }
+
   private deliver(message: string): void {
     let notification: ShipmentNotification;
     try {
