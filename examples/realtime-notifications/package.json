@@ -5,6 +5,7 @@
   "scripts": {
     "demo": "node --experimental-strip-types src/demo.ts",
     "serve": "node --experimental-strip-types src/server.ts",
+    "topics": "node --experimental-strip-types src/declare-topic.ts",
     "dispatcher": "node --experimental-strip-types src/dispatcher-main.ts",
     "replica": "node --experimental-strip-types src/replica-main.ts",
     "live": "node --experimental-strip-types src/live-processes.ts",
