@@ -1,5 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Kafka, type Producer } from "kafkajs";
 import { createClient, type RedisClientType } from "redis";
 import { parseStatusChangedEvent, type ShipmentNotification, type ShipmentStatusChangedEvent } from "./contracts.ts";
@@ -7,6 +10,7 @@ import { SHIPMENT_STATUS_CHANNEL } from "./pubsub.ts";
 import { SseReplica } from "./sse-replica.ts";
 
 const TOPIC = "shipment-status";
+const pagePath = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "live.html");
 const replicaId = process.env.REPLICA_ID ?? "A";
 const port = Number(process.env.PORT ?? "4317");
 const redisUrl = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
@@ -52,6 +56,13 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     writeCors(res);
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/") {
+    writeCors(res);
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(readFileSync(pagePath));
     return;
   }
 

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Kafka, Redis, and three SSE replicas</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 44rem; line-height: 1.45; color: #1c1917; }
+    button, label { font: inherit; }
+    button { margin: 0.4rem 0.4rem 0 0; }
+    #log { white-space: pre-wrap; background: #f5f5f4; padding: 1rem; min-height: 8rem; }
+    #view { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Three local replicas</h1>
+  <p>
+    This page is a study, not an accepted production design. Replica A is port 4317, B is 4318, C is 4319.
+    Connect SSE pins this browser to the selected replica.
+  </p>
+  <p>
+    <label><input type="radio" name="replica" value="A"> Connected to A</label>
+    <label><input type="radio" name="replica" value="B" checked> Connected to B</label>
+    <label><input type="radio" name="replica" value="C"> Connected to C</label>
+  </p>
+  <p>
+    <button id="connect" type="button">Connect SSE</button>
+  </p>
+  <p>Visible status: <span id="view">none yet</span></p>
+  <h2>Log</h2>
+  <div id="log"></div>
+  <script>
+    const ports = { A: 4317, B: 4318, C: 4319 };
+    let source = null;
+    let view = null;
+    const logNode = document.querySelector("#log");
+    const viewNode = document.querySelector("#view");
+
+    function log(line) {
+      logNode.textContent += line + "\n";
+    }
+
+    function selectedReplica() {
+      return document.querySelector("input[name=replica]:checked").value;
+    }
+
+    function origin(replica) {
+      return "http://127.0.0.1:" + ports[replica];
+    }
+
+    function applyStatusUpdate(current, incoming) {
+      if (
+        current &&
+        current.shipmentId === incoming.shipmentId &&
+        current.tenantId === incoming.tenantId &&
+        incoming.revision <= current.revision
+      ) {
+        return current;
+      }
+      return incoming;
+    }
+
+    document.querySelector("#connect").addEventListener("click", () => {
+      if (source) source.close();
+      const replica = selectedReplica();
+      const params = new URLSearchParams({ tenantId: "tenant-acme", userId: "alice", shipments: "shp-1" });
+      source = new EventSource(origin(replica) + "/events?" + params.toString());
+      source.addEventListener("shipment-status", (event) => {
+        const incoming = JSON.parse(event.data);
+        const previous = view;
+        view = applyStatusUpdate(view, incoming);
+        const ignored = previous && view === previous;
+        viewNode.textContent = "revision " + view.revision + " · " + view.status;
+        log((ignored ? "ignored" : "applied") + " SSE from the connected replica, revision " + incoming.revision + " (" + incoming.status + ")");
+      });
+      source.onerror = () => log("SSE to replica " + replica + " was interrupted.");
+      log("Browser socket is on replica " + replica + " only.");
+    });
+
+  </script>
+</body>
+</html>
