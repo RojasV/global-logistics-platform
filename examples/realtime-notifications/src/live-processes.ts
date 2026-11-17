@@ -7,6 +7,23 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const node = process.execPath;
 const children: ChildProcess[] = [];
 
+function once(script: string): Promise<number> {
+  return new Promise((resolve) => {
+    const child = spawn(node, ["--experimental-strip-types", script], {
+      cwd: root,
+      env: process.env,
+      stdio: "inherit",
+    });
+    child.on("exit", (code) => resolve(code ?? 1));
+  });
+}
+
+const declared = await once("src/declare-topic.ts");
+if (declared !== 0) {
+  console.error("topic declaration failed");
+  process.exit(declared);
+}
+
 function start(script: string, env: Record<string, string>, name: string): void {
   const child = spawn(node, ["--experimental-strip-types", script], {
     cwd: root,
