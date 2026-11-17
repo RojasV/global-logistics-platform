@@ -6,5 +6,8 @@
     "demo": "node --experimental-strip-types src/demo.ts",
     "serve": "node --experimental-strip-types src/server.ts",
     "test": "node --experimental-strip-types --test test/notifications.test.ts"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
   }
 }
