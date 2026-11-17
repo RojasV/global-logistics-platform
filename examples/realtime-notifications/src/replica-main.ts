@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createClient, type RedisClientType } from "redis";
-import type { ShipmentNotification } from "./contracts.ts";
+import { parseStatusChangedEvent, type ShipmentNotification, type ShipmentStatusChangedEvent } from "./contracts.ts";
 import { SHIPMENT_STATUS_CHANNEL } from "./pubsub.ts";
 import { SseReplica } from "./sse-replica.ts";
 
@@ -58,6 +58,19 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/local-status") {
+    const event = parseStatusChangedEvent(JSON.parse(await readBody(req)));
+    if (!event) {
+      sendJson(res, 400, { error: "invalid status event" });
+      return;
+    }
+    const notification = toNotification(event);
+    remember(notification);
+    fanout.acceptMessage(JSON.stringify(notification));
+    sendJson(res, 202, { scope: "local", replicaId, notification });
+    return;
+  }
+
   sendJson(res, 404, { error: "not found" });
 }
 
@@ -101,6 +114,17 @@ function openSse(req: IncomingMessage, res: ServerResponse, url: URL): void {
   res.on("close", close);
 }
 
+function toNotification(event: ShipmentStatusChangedEvent): ShipmentNotification {
+  return {
+    eventId: event.eventId,
+    shipmentId: event.shipmentId,
+    tenantId: event.tenantId,
+    revision: event.revision,
+    status: event.status,
+    occurredAt: event.occurredAt,
+  };
+}
+
 function remember(notification: ShipmentNotification): void {
   const key = `${notification.tenantId}:${notification.shipmentId}`;
   const previous = latestByShipment.get(key);
@@ -119,3 +143,20 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > 1_000_000) {
+        reject(new Error("body too large"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
+}
